@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>衣温 - 温度穿搭助手</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="app-header">
+      <div class="header-left">
+        <span class="app-logo">👔 衣温</span>
+      </div>
+      <div class="header-center" id="header-title">
+        <span>温度感知穿搭</span>
+      </div>
+      <div class="header-right"></div>
+    </header>
+
+    <!-- Content -->
+    <main id="main-content">
+      <!-- Page: Home -->
+      <div class="page active" id="page-home">
+        <div class="weather-card" id="weather-card">
+          <div class="weather-loading" id="weather-loading">
+            <div class="spinner"></div>
+            <p>获取天气数据中...</p>
+          </div>
+          <div class="weather-content" id="weather-content" style="display:none;">
+            <div class="weather-temp-row">
+              <span class="weather-temp" id="weather-temp">--°</span>
+              <span class="weather-icon" id="weather-icon">☀️</span>
+            </div>
+            <div class="weather-info">
+              <span class="weather-city" id="weather-city">--</span>
+              <span class="weather-condition" id="weather-condition">--</span>
+              <span class="weather-humidity" id="weather-humidity">湿度: --%</span>
+            </div>
+            <div class="weather-advice" id="weather-advice"></div>
+          </div>
+          <div class="weather-error" id="weather-error" style="display:none;">
+            <p>⚠️ 无法获取天气数据</p>
+            <button class="btn btn-sm" onclick="app.refreshWeather()">重试</button>
+            <button class="btn btn-sm btn-outline" onclick="app.showManualTempInput()">手动输入</button>
+          </div>
+          <div class="weather-manual" id="weather-manual" style="display:none;">
+            <input type="number" id="manual-temp-input" placeholder="输入当前温度 (°C)" class="input">
+            <select id="manual-condition-input" class="input">
+              <option value="晴">☀️ 晴</option>
+              <option value="多云">⛅ 多云</option>
+              <option value="阴">☁️ 阴</option>
+              <option value="小雨">🌦 小雨</option>
+              <option value="大雨">🌧 大雨</option>
+              <option value="雪">❄️ 雪</option>
+            </select>
+            <button class="btn" onclick="app.setManualTemp()">确认</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h3>今日速配</h3>
+            <button class="btn btn-sm btn-outline" onclick="app.switchTab('outfits')">查看全部搭配 →</button>
+          </div>
+          <div id="home-outfits" class="home-outfits">
+            <p class="text-muted">加载中...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page: Wardrobe -->
+      <div class="page" id="page-wardrobe">
+        <div class="wardrobe-toolbar">
+          <button class="btn" onclick="app.showAddItemModal()">+ 添加衣物</button>
+          <button class="btn btn-sm btn-outline" id="sample-btn" onclick="app.loadSamples()">📦 示例数据</button>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-chip active" data-filter="all">全部</button>
+          <button class="filter-chip" data-filter="top">上装</button>
+          <button class="filter-chip" data-filter="bottom">下装</button>
+          <button class="filter-chip" data-filter="outerwear">外套</button>
+          <button class="filter-chip" data-filter="dress">连衣裙</button>
+          <button class="filter-chip" data-filter="shoes">鞋履</button>
+          <button class="filter-chip" data-filter="accessory">配饰</button>
+        </div>
+        <div id="wardrobe-grid" class="wardrobe-grid"></div>
+        <div id="wardrobe-empty" class="empty-state" style="display:none;">
+          <p>📭 衣橱是空的</p>
+          <p class="text-muted">点击"添加衣物"开始建立你的数字衣橱</p>
+        </div>
+      </div>
+
+      <!-- Page: Outfits -->
+      <div class="page" id="page-outfits">
+        <div class="outfits-toolbar">
+          <button class="btn" onclick="app.generateOutfits()">🔄 生成搭配</button>
+          <button class="btn btn-sm btn-outline" onclick="app.switchTab('wardrobe')">去添加更多衣物</button>
+        </div>
+        <div id="outfits-list" class="outfits-list"></div>
+        <div id="outfits-empty" class="empty-state">
+          <p>👔 暂无搭配推荐</p>
+          <p class="text-muted">请先添加衣物并获取天气数据</p>
+        </div>
+      </div>
+
+      <!-- Page: Profile -->
+      <div class="page" id="page-profile">
+        <div class="profile-section">
+          <h3>🌡️ 天气设置</h3>
+          <div class="form-group">
+            <label>默认城市</label>
+            <div class="input-row">
+              <input type="text" id="profile-city" class="input" placeholder="如: 北京">
+              <button class="btn btn-sm" onclick="app.saveCity()">保存</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>OpenWeatherMap API Key（可选）</label>
+            <div class="input-row">
+              <input type="text" id="profile-api-key" class="input" placeholder="留空则手动输入温度">
+              <button class="btn btn-sm" onclick="app.saveApiKey()">保存</button>
+            </div>
+            <p class="text-muted small">免费申请: <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a></p>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <h3>📐 身材数据</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>身高 (cm)</label>
+              <input type="number" id="profile-height" class="input" placeholder="170">
+            </div>
+            <div class="form-group">
+              <label>体重 (kg)</label>
+              <input type="number" id="profile-weight" class="input" placeholder="65">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>体型</label>
+            <select id="profile-body-shape" class="input">
+              <option value="">请选择</option>
+              <option value="矩形">矩形 (H型)</option>
+              <option value="沙漏型">沙漏型 (X型)</option>
+              <option value="梨形">梨形 (A型)</option>
+              <option value="苹果型">苹果型 (O型)</option>
+              <option value="倒三角">倒三角 (Y型)</option>
+            </select>
+          </div>
+          <button class="btn" onclick="app.saveBodyData()">保存身材数据</button>
+        </div>
+
+        <div class="profile-section">
+          <h3>🎨 风格偏好</h3>
+          <div class="tag-group" id="style-tags">
+            <span class="tag" data-value="休闲">休闲</span>
+            <span class="tag" data-value="通勤">通勤</span>
+            <span class="tag" data-value="商务">商务</span>
+            <span class="tag" data-value="街头">街头</span>
+            <span class="tag" data-value="极简">极简</span>
+            <span class="tag" data-value="甜美">甜美</span>
+            <span class="tag" data-value="运动">运动</span>
+            <span class="tag" data-value="复古">复古</span>
+            <span class="tag" data-value="学院">学院</span>
+            <span class="tag" data-value="约会">约会</span>
+          </div>
+          <button class="btn" onclick="app.saveStylePreferences()">保存风格偏好</button>
+        </div>
+
+        <div class="profile-section">
+          <h3>📊 数据管理</h3>
+          <button class="btn btn-outline btn-danger" onclick="app.clearAllData()">清空所有数据</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav">
+      <button class="nav-item active" data-tab="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">温度</span>
+      </button>
+      <button class="nav-item" data-tab="wardrobe">
+        <span class="nav-icon">👕</span>
+        <span class="nav-label">衣橱</span>
+      </button>
+      <button class="nav-item" data-tab="outfits">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label">搭配</span>
+      </button>
+      <button class="nav-item" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">我的</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Add Item Modal -->
+  <div id="add-item-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>添加衣物</h3>
+        <button class="modal-close" onclick="app.closeAddItemModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>衣物名称</label>
+          <input type="text" id="add-name" class="input" placeholder="如: 白色棉T恤">
+        </div>
+        <div class="form-group">
+          <label>品类</label>
+          <select id="add-category" class="input" onchange="app.onAddFormChange()">
+            <option value="top">上装</option>
+            <option value="bottom">下装</option>
+            <option value="outerwear">外套</option>
+            <option value="dress">连衣裙</option>
+            <option value="shoes">鞋履</option>
+            <option value="accessory">配饰</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>款式</label>
+          <select id="add-style" class="input" onchange="app.onAddFormChange()"></select>
+        </div>
+        <div class="form-group">
+          <label>面料材质</label>
+          <select id="add-fabric" class="input" onchange="app.onAddFormChange()">
+            <option value="棉">棉</option>
+            <option value="羊毛">羊毛</option>
+            <option value="聚酯纤维">聚酯纤维</option>
+            <option value="真丝">真丝</option>
+            <option value="亚麻">亚麻</option>
+            <option value="牛仔布">牛仔布</option>
+            <option value="针织">针织</option>
+            <option value="皮革">皮革</option>
+            <option value="混纺">混纺</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>厚度</label>
+          <div class="thickness-row">
+            <input type="range" id="add-thickness" min="1" max="5" value="3" step="1" oninput="app.onAddFormChange()">
+            <span id="add-thickness-label" class="thickness-label">适中</span>
+          </div>
+          <div class="thickness-hints">
+            <span>极薄</span><span>偏薄</span><span>适中</span><span>偏厚</span><span>加厚</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>颜色</label>
+          <div class="color-picker" id="color-picker">
+            <span class="color-dot" data-color="#000000" style="background:#000000;" title="黑色"></span>
+            <span class="color-dot" data-color="#FFFFFF" style="background:#FFFFFF;border:1px solid #ddd;" title="白色"></span>
+            <span class="color-dot" data-color="#808080" style="background:#808080;" title="灰色"></span>
+            <span class="color-dot" data-color="#C0C0C0" style="background:#C0C0C0;border:1px solid #ddd;" title="银色"></span>
+            <span class="color-dot" data-color="#8B4513" style="background:#8B4513;" title="棕色"></span>
+            <span class="color-dot" data-color="#0000FF" style="background:#0000FF;" title="蓝色"></span>
+            <span class="color-dot" data-color="#FF0000" style="background:#FF0000;" title="红色"></span>
+            <span class="color-dot" data-color="#008000" style="background:#008000;" title="绿色"></span>
+            <span class="color-dot" data-color="#FFFF00" style="background:#FFFF00;" title="黄色"></span>
+            <span class="color-dot" data-color="#FFC0CB" style="background:#FFC0CB;" title="粉色"></span>
+            <span class="color-dot" data-color="#800080" style="background:#800080;" title="紫色"></span>
+            <span class="color-dot" data-color="#FFA500" style="background:#FFA500;" title="橙色"></span>
+          </div>
+          <input type="text" id="add-color-text" class="input" placeholder="或手动输入颜色名称" style="margin-top:8px;">
+        </div>
+        <div id="add-temp-preview" class="temp-preview">
+          ⚡ App 推算: <strong id="add-temp-range">--°C ~ --°C</strong>
+          <span id="add-season-tags" class="season-tags"></span>
+        </div>
+        <div id="add-error" class="error-msg" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeAddItemModal()">取消</button>
+        <button class="btn" onclick="app.saveNewItem()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Item Modal -->
+  <div id="edit-item-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>编辑衣物</h3>
+        <button class="modal-close" onclick="app.closeEditItemModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>衣物名称</label>
+          <input type="text" id="edit-name" class="input">
+        </div>
+        <div class="form-group">
+          <label>品类</label>
+          <select id="edit-category" class="input" onchange="app.onEditFormChange()">
+            <option value="top">上装</option>
+            <option value="bottom">下装</option>
+            <option value="outerwear">外套</option>
+            <option value="dress">连衣裙</option>
+            <option value="shoes">鞋履</option>
+            <option value="accessory">配饰</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>款式</label>
+          <select id="edit-style" class="input" onchange="app.onEditFormChange()"></select>
+        </div>
+        <div class="form-group">
+          <label>面料材质</label>
+          <select id="edit-fabric" class="input" onchange="app.onEditFormChange()">
+            <option value="棉">棉</option>
+            <option value="羊毛">羊毛</option>
+            <option value="聚酯纤维">聚酯纤维</option>
+            <option value="真丝">真丝</option>
+            <option value="亚麻">亚麻</option>
+            <option value="牛仔布">牛仔布</option>
+            <option value="针织">针织</option>
+            <option value="皮革">皮革</option>
+            <option value="混纺">混纺</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>厚度</label>
+          <div class="thickness-row">
+            <input type="range" id="edit-thickness" min="1" max="5" value="3" step="1" oninput="app.onEditFormChange()">
+            <span id="edit-thickness-label" class="thickness-label"></span>
+          </div>
+          <div class="thickness-hints">
+            <span>极薄</span><span>偏薄</span><span>适中</span><span>偏厚</span><span>加厚</span>
+          </div>
+        </div>
+        <div id="edit-temp-preview" class="temp-preview">
+          ⚡ App 推算: <strong id="edit-temp-range">--°C ~ --°C</strong>
+          <span id="edit-season-tags" class="season-tags"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-danger" onclick="app.deleteEditingItem()">删除</button>
+        <button class="btn btn-outline" onclick="app.closeEditItemModal()">取消</button>
+        <button class="btn" onclick="app.saveEditedItem()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="weather.js"></script>
+  <script src="engine.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
